@@ -1,0 +1,1 @@
+This is [my old Java implementation](http://code.google.com/p/othello-evolution/), copied here for reference.
