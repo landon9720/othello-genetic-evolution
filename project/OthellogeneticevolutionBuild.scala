@@ -8,7 +8,7 @@ object OthellogeneticevolutionBuild extends Build {
     base = file("."),
     settings = Project.defaultSettings ++ Seq(
       name := "othello-genetic-evolution",
-      organization := "kuhn",
+      organization := "kb",
       version := "0.1-SNAPSHOT",
       scalaVersion := "2.9.2",
       resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases",
