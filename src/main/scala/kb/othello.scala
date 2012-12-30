@@ -1,7 +1,6 @@
 package kb
 
 import util.control.Breaks
-import util.control.Exception.Try
 
 trait Color
 object E extends Color {
@@ -27,17 +26,17 @@ object Board {
 
 class Board(val data:Seq[Color]) {
 
-	private def xy(data:Seq[Color], x:Int, y:Int) = data(x + y * 8)
-	private def xy(data:collection.mutable.Seq[Color], x:Int, y:Int) = data(x + y * 8)
-	private def xy(data:collection.mutable.Seq[Color], x:Int, y:Int, c:Color) = data.update(x + y * 8, c)
+	private def get(data:Seq[Color], x:Int, y:Int) = data(x + y * 8)
+	private def get(data:collection.mutable.Seq[Color], x:Int, y:Int) = data(x + y * 8)
+	private def set(data:collection.mutable.Seq[Color], x:Int, y:Int, c:Color) { data.update(x + y * 8, c) }
 
 	def play(color:Color, col:Int, row:Int):Board = {
 
-		assert(xy(data, col, row) == E, "not empty")
+		assert(get(data, col, row) == E, "not empty")
 
 		val data1 = collection.mutable.Seq(data:_*)
 
-		xy(data1, col, row, color)
+		set(data1, col, row, color)
 
 		val v0 = playVector(data1, color, col, row, 0, -1)   // north
 		val v1 = playVector(data1, color, col, row, 1, -1)	 // northeast
@@ -54,12 +53,15 @@ class Board(val data:Seq[Color]) {
 
 	private def playVector(data:collection.mutable.Seq[Color], color:Color, col:Int, row:Int, dx:Int, dy:Int):Boolean = {
 
-		var valid = false
-		
 		var x:Int = col + dx
 		var y:Int = row + dy
 		
-		var c = xy(data.toSeq, x, y)
+		if (x < 0 || x >= 8 || y < 0 || y >= 8)
+			return false
+
+		var valid = false
+
+		var c = get(data.toSeq, x, y)
 		if (x >= 0 && x < 8 && y >= 0 && y < 8 && c != color) {
 			val _b0 = new Breaks
 			_b0.breakable {
@@ -71,13 +73,13 @@ class Board(val data:Seq[Color]) {
 						while (x != col || y != row) {
 							x -= dx
 							y -= dy
-							xy(data, x, y, color)
+							set(data, x, y, color)
 						}
 						_b0.break
 					}
 					x += dx
 					y += dy
-					c = xy(data, x, y)
+					c = get(data, x, y)
 				}
 			}
 		}
@@ -85,14 +87,10 @@ class Board(val data:Seq[Color]) {
 		valid
 	}
 	
-	override def toString:String = {
-		(for {
-			y <- 0 until 8
-		} yield {
-			(for {
-				x <- 0 until 8
-			} yield {
-				xy(data, x, y)
+	override def toString = {
+		(for (y <- 0 until 8) yield {
+			(for (x <- 0 until 8) yield {
+				get(data, x, y)
 			}).mkString("", " ", "\n")
 		}).mkString("")
 	}
