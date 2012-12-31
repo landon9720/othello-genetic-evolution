@@ -3,55 +3,67 @@ package kb
 import util.control.Breaks
 
 trait Color
-object E extends Color {
+object Empty extends Color {
 	override def toString = "."
 }
-object B extends Color {
+object Black extends Color {
 	override def toString = "B"
 }
-object W extends Color {
+object White extends Color {
 	override def toString = "W"
 }
 
 object Board {
 	def apply() = {
-		val data:Array[Color] = Array.fill(64)(E)
-		data.update(3 + 3 * 8, W)
-		data.update(4 + 4 * 8, W)
-		data.update(3 + 4 * 8, B)
-		data.update(4 + 3 * 8, B)
-		new Board(data)
+		val state = new MutableBoardState(collection.mutable.Seq.fill[Color](64)(Empty))
+		state.set(3, 3, White)
+		state.set(4, 4, White)
+		state.set(3, 4, Black)
+		state.set(4, 3, Black)
+		new Board(state)
 	}
 }
 
-class Board(val data:Seq[Color]) {
+class BoardState(seq:Seq[Color]) {
 
-	private def get(data:Seq[Color], x:Int, y:Int) = data(x + y * 8)
-	private def get(data:collection.mutable.Seq[Color], x:Int, y:Int) = data(x + y * 8)
-	private def set(data:collection.mutable.Seq[Color], x:Int, y:Int, c:Color) { data.update(x + y * 8, c) }
+	def get(x:Int, y:Int) =
+		seq(x + y * 8)
+		
+	def mutable = new MutableBoardState(collection.mutable.Seq(seq:_*))
+}
+
+class MutableBoardState(seq:collection.mutable.Seq[Color])
+	extends BoardState(seq) {
+
+	def set(x:Int, y:Int, c:Color) {
+		seq.update(x + y * 8, c)
+	}
+	
+	def immutable = new BoardState(seq.toSeq) // toSeq to make immutable
+}
+
+class Board(state:BoardState) {
 
 	def play(color:Color, col:Int, row:Int):Board = {
 
-		assert(get(data, col, row) == E, "not empty")
+		assert(state.get(col, row) == Empty, "not empty")
 
-		val data1 = collection.mutable.Seq(data:_*)
+		val result = state.mutable
 
-		set(data1, col, row, color)
+		result.set(col, row, color)
 
-		val v0 = playVector(data1, color, col, row, 0, -1)   // north
-		val v1 = playVector(data1, color, col, row, 1, -1)	 // northeast
-		val v2 = playVector(data1, color, col, row, 1, 0)    // east
-		val v3 = playVector(data1, color, col, row, 1, 1)    // southeast
-		val v4 = playVector(data1, color, col, row, 0, 1)    // south
-		val v5 = playVector(data1, color, col, row, -1, 1)	 // southwest
-		val v6 = playVector(data1, color, col, row, -1, 0)	 // west
-		val v7 = playVector(data1, color, col, row, -1, -1)  // northwest
+		val flipped = vectors.foldLeft(false) { (flipped:Boolean, dxdy:Tuple2[Int, Int]) =>
+			playVector(result, color, col, row, dxdy._1, dxdy._2) || flipped
+		}
+		assert(flipped, "nothing flipped")
 
-		assert(v0 || v1 || v2 || v3 || v4 || v5 || v6 || v7, "nothing flipped")
-		new Board(data1)
+		new Board(result.immutable)
 	}
 
-	private def playVector(data:collection.mutable.Seq[Color], color:Color, col:Int, row:Int, dx:Int, dy:Int):Boolean = {
+	private val vectors =
+		Seq((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+
+	private def playVector(state:MutableBoardState, color:Color, col:Int, row:Int, dx:Int, dy:Int):Boolean = {
 
 		var x:Int = col + dx
 		var y:Int = row + dy
@@ -61,25 +73,25 @@ class Board(val data:Seq[Color]) {
 
 		var valid = false
 
-		var c = get(data.toSeq, x, y)
+		var c = state.get(x, y)
 		if (x >= 0 && x < 8 && y >= 0 && y < 8 && c != color) {
 			val _b0 = new Breaks
 			_b0.breakable {
 				while (x >= 0 && x < 8 && y >= 0 && y < 8) {
-					if (c == E) {
+					if (c == Empty) {
 						_b0.break
 					} else if (c == color) {
 						valid = true
 						while (x != col || y != row) {
 							x -= dx
 							y -= dy
-							set(data, x, y, color)
+							state.set(x, y, color)
 						}
 						_b0.break
 					}
 					x += dx
 					y += dy
-					c = get(data, x, y)
+					c = state.get(x, y)
 				}
 			}
 		}
@@ -87,11 +99,23 @@ class Board(val data:Seq[Color]) {
 		valid
 	}
 	
-	override def toString = {
-		(for (y <- 0 until 8) yield {
+	override def toString =
+		(for (y <- 0 until 8 reverse) yield {
 			(for (x <- 0 until 8) yield {
-				get(data, x, y)
-			}).mkString("", " ", "\n")
-		}).mkString("")
+				state.get(x, y)
+			}).mkString(y + " ", " ", "\n")
+		}).mkString("", "", "  0 1 2 3 4 5 6 7")
+}
+
+object Console {
+
+	val E = Empty
+	val B = Black
+	val W = White
+	
+	var b = Board()
+	def play(c:Color, col:Int, row:Int) {
+		b = b.play(c, col, row)
+		println(b)
 	}
 }
