@@ -1,7 +1,5 @@
 package kb
 
-import util.control.Breaks
-
 trait Color
 object Empty extends Color {
 	override def toString = "."
@@ -52,7 +50,8 @@ class Board(state:BoardState) {
 
 		result.set(col, row, color)
 
-		val flipped = vectors.foldLeft(false) { (flipped:Boolean, dxdy:Tuple2[Int, Int]) =>
+		val flipped = vectors.foldLeft(false) {
+			(flipped:Boolean, dxdy:Tuple2[Int, Int]) =>
 			playVector(result, color, col, row, dxdy._1, dxdy._2) || flipped
 		}
 		assert(flipped, "nothing flipped")
@@ -64,6 +63,8 @@ class Board(state:BoardState) {
 		Seq((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
 
 	private def playVector(state:MutableBoardState, color:Color, col:Int, row:Int, dx:Int, dy:Int):Boolean = {
+
+		import util.control.Breaks
 
 		var x:Int = col + dx
 		var y:Int = row + dy
@@ -115,7 +116,11 @@ object Console {
 	
 	var b = Board()
 	def play(c:Color, col:Int, row:Int) {
-		b = b.play(c, col, row)
-		println(b)
+		try {
+			b = b.play(c, col, row)
+			println(b)
+		} catch {
+			case _ => println("Sorry")
+		}
 	}
 }
