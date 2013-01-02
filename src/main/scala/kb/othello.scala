@@ -1,14 +1,19 @@
 package kb
 
-trait Color
+trait Color {
+  def opponent:Color
+}
 object White extends Color {
   override def toString = "W"
+  val opponent = Black
 }
 object Black extends Color {
 	override def toString = "B"
+  val opponent = White
 }
 object Empty extends Color {
   override def toString = "."
+  def opponent = sys.error("")
 }
 
 case class Score(white:Int, black:Int, empty:Int) {
@@ -70,7 +75,7 @@ class MutableBoardState[T](seq:collection.mutable.Seq[T])
 	def immutable = new BoardState(seq.toSeq) // toSeq to make immutable
 }
 
-class Board(state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
+class Board(val state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
 
 	def play(color:Color, col:Int, row:Int):Board = {
 
@@ -82,52 +87,33 @@ class Board(state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
 
 		val flipped = vectors.foldLeft(false) {
 			(flipped:Boolean, dxdy:Tuple2[Int, Int]) =>
-			playVector(result, color, col, row, dxdy._1, dxdy._2) || flipped
+      val (dx, dy) = dxdy
+			flip(result, color, col + dx, row + dy, dx, dy) || flipped
 		}
 		assert(flipped, "nothing flipped")
 
 		new Board(result.immutable)
 	}
 
-	private val vectors =
+	val vectors =
 		Seq((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
 
-	private def playVector(state:MutableBoardState[Color], color:Color, col:Int, row:Int, dx:Int, dy:Int):Boolean = {
-
-		import util.control.Breaks
-
-		var x:Int = col + dx
-		var y:Int = row + dy
-		
-		if (x < 0 || x >= 8 || y < 0 || y >= 8)
-			return false
-
-		var valid = false
-
-		var c = state.get(x, y)
-		if (x >= 0 && x < 8 && y >= 0 && y < 8 && c != color) {
-			val _b0 = new Breaks
-			_b0.breakable {
-				while (x >= 0 && x < 8 && y >= 0 && y < 8) {
-					if (c == Empty) {
-						_b0.break
-					} else if (c == color) {
-						valid = true
-						while (x != col || y != row) {
-							x -= dx
-							y -= dy
-							state.set(x, y, color)
-						}
-						_b0.break
-					}
-					x += dx
-					y += dy
-					c = state.get(x, y)
-				}
-			}
-		}
-
-		valid
+	def flip(state:MutableBoardState[Color], color:Color, x:Int, y:Int, dx:Int, dy:Int):Boolean = {
+    def in(x:Int, y:Int) = x >= 0 && x <= 7 && y >= 0 && y <= 7
+    val x1 = x + dx
+    val y1 = y + dy
+    in(x, y) && (state.get(x, y) match {
+      case Empty => false
+      case c if in(x1, y1) && state.get(x1, y1) == color => {
+        state.set(x, y, color)
+        true
+      }
+      case c if c == color.opponent && flip(state, color, x + dx, y + dy, dx, dy) => {
+        state.set(x, y, color)
+        true
+      }
+      case _ => false
+    })
 	}
 
   def iterator = state.iterator
@@ -145,7 +131,7 @@ class Board(state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
     Score(w, b, 64 - w -b)
   }
 	
-	override def toString = "\n%17s\n%s".format(score, state)
+	override def toString = state.toString
 }
 
 object Console {
@@ -176,11 +162,6 @@ class Game(
     println("%s's move".format(color))
     println(board)
 
-    val opponent = color match {
-      case White => Black
-      case Black => White
-    }
-
     val pass = board.score.empty == 0 || ! board.exists {
       case (x, y, Empty) => try {
         board.play(color, x, y)
@@ -193,13 +174,13 @@ class Game(
 
     if (pass && ! passed) {
       println("%s passed".format(color))
-      play(board, opponent, true)
+      play(board, color.opponent, true)
     } else if (! pass) {
       val (x, y) = color match {
         case White => white.play(White, board)
         case Black => black.play(Black, board)
       }
-      play(board.play(color, x, y), opponent, false)
+      play(board.play(color, x, y), color.opponent, false)
     }
   }
 }
