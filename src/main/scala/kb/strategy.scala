@@ -27,27 +27,32 @@ class SuperStrategy(
 ) {
   def play(color:Color, board:Board):(Int, Int) = {
 
-    val legal = BoardState { (x:Int, y:Int) =>
-        try {
-          board.play(color, x, y)
-          true
-        } catch {
-          case _ => false
-        }
+    case class Meta(legal:Boolean, votes:Int = 0) {
+      override def toString = {
+        if (!legal) "."
+        else if (votes > 9) "*"
+        else votes.toString
+      }
     }
 
-    class Score(var votes:Int)
-    val scores = new MutableBoardState[Score](collection.mutable.Seq.fill(64)(new Score(0)))
-    for {
-      s <- strategies
-      (x, y) <- legal
-      if s.rate(color, x, y, board)
-    } {
-      val score = scores.get(x, y)
-      score.votes = score.votes + 1
+    val meta = BoardState { (x:Int, y:Int) =>
+      val valid = try {
+        board.play(color, x, y)
+        true
+      } catch {
+        case _ => false
+      }
+      if (valid) {
+        val votes = strategies.count(_.rate(color, x, y, board))
+        new Meta(true, votes)
+      } else {
+        new Meta(false)
+      }
     }
 
-    val (x, y, _) = scores.maxBy(_._3.votes)
+    println("meta: \n%s".format(meta))
+
+    val (x, y, _) = meta.filter(_._3.legal).maxBy(_._3.votes)
     (x, y)
   }
 }

@@ -42,13 +42,21 @@ class BoardState[T](seq:Seq[T]) extends Iterable[(Int, Int, T)] {
       y <- 0 until 8
     } yield (x, y, get(x, y))
   ).iterator
+
+  override def toString = (for (y <- 0 until 8 reverse) yield {
+    (for (x <- 0 until 8) yield {
+      get(x, y)
+    }).mkString(y + " ", " ", "\n")
+  }).mkString("", "", "  0 1 2 3 4 5 6 7")
 		
 	def mutable = new MutableBoardState(collection.mutable.Seq(seq:_*))
 }
 
 object BoardState {
   def apply[T](f: (Int, Int) => T):BoardState[T] = {
-    val state = new BoardState() // too tired, need to do something else
+    new BoardState(collection.mutable.Seq.tabulate(64) { i =>
+      f(i % 8, i / 8)
+    })
   }
 }
 
@@ -137,12 +145,7 @@ class Board(state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
     Score(w, b, 64 - w -b)
   }
 	
-	override def toString =
-		(for (y <- 0 until 8 reverse) yield {
-			(for (x <- 0 until 8) yield {
-				state.get(x, y)
-			}).mkString(y + " ", " ", "\n")
-		}).mkString("%17s\n".format(score), "", "  0 1 2 3 4 5 6 7")
+	override def toString = "\n%17s\n%s".format(score, state)
 }
 
 object Console {
@@ -164,4 +167,39 @@ object Console {
   def b(col:Int, row:Int) = play(B, col, row)
 }
 
+class Game(
+  white:SuperStrategy = new SuperStrategy,
+  black:SuperStrategy = new SuperStrategy
+) {
+  def play(board:Board, color:Color, passed:Boolean = false) {
 
+    println("%s's move".format(color))
+    println(board)
+
+    val opponent = color match {
+      case White => Black
+      case Black => White
+    }
+
+    val pass = board.score.empty == 0 || ! board.exists {
+      case (x, y, Empty) => try {
+        board.play(color, x, y)
+        true
+      } catch {
+        case _ => false
+      }
+      case _ => false
+    }
+
+    if (pass && ! passed) {
+      println("%s passed".format(color))
+      play(board, opponent, true)
+    } else if (! pass) {
+      val (x, y) = color match {
+        case White => white.play(White, board)
+        case Black => black.play(Black, board)
+      }
+      play(board.play(color, x, y), opponent, false)
+    }
+  }
+}
