@@ -22,7 +22,7 @@ case class Score(white:Int, black:Int, empty:Int) {
 
 object Board {
 	def apply() = {
-		val state = new MutableBoardState(collection.mutable.Seq.fill[Color](64)(Empty))
+		val state = new MutableBoardState[Color](collection.mutable.Seq.fill[Color](64)(Empty))
 		state.set(3, 3, White)
 		state.set(4, 4, White)
 		state.set(3, 4, Black)
@@ -31,25 +31,38 @@ object Board {
 	}
 }
 
-class BoardState(seq:Seq[Color]) {
+class BoardState[T](seq:Seq[T]) extends Iterable[(Int, Int, T)] {
 
 	def get(x:Int, y:Int) =
 		seq(x + y * 8)
+
+  def iterator = (
+    for {
+      x <- 0 until 8
+      y <- 0 until 8
+    } yield (x, y, get(x, y))
+  ).iterator
 		
 	def mutable = new MutableBoardState(collection.mutable.Seq(seq:_*))
 }
 
-class MutableBoardState(seq:collection.mutable.Seq[Color])
-	extends BoardState(seq) {
+object BoardState {
+  def apply[T](f: (Int, Int) => T):BoardState[T] = {
+    val state = new BoardState() // too tired, need to do something else
+  }
+}
 
-	def set(x:Int, y:Int, c:Color) {
-		seq.update(x + y * 8, c)
+class MutableBoardState[T](seq:collection.mutable.Seq[T])
+	extends BoardState[T](seq) {
+
+	def set(x:Int, y:Int, t:T) {
+		seq.update(x + y * 8, t)
 	}
 	
 	def immutable = new BoardState(seq.toSeq) // toSeq to make immutable
 }
 
-class Board(state:BoardState) extends Iterable[(Int, Int, Color)] {
+class Board(state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
 
 	def play(color:Color, col:Int, row:Int):Board = {
 
@@ -71,7 +84,7 @@ class Board(state:BoardState) extends Iterable[(Int, Int, Color)] {
 	private val vectors =
 		Seq((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
 
-	private def playVector(state:MutableBoardState, color:Color, col:Int, row:Int, dx:Int, dy:Int):Boolean = {
+	private def playVector(state:MutableBoardState[Color], color:Color, col:Int, row:Int, dx:Int, dy:Int):Boolean = {
 
 		import util.control.Breaks
 
@@ -109,12 +122,7 @@ class Board(state:BoardState) extends Iterable[(Int, Int, Color)] {
 		valid
 	}
 
-  def iterator = (
-    for {
-      x <- 0 until 8
-      y <- 0 until 8
-    } yield (x, y, state.get(x, y))
-  ).iterator
+  def iterator = state.iterator
 
   def score = {
     var w = 0
