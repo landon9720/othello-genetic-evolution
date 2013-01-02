@@ -1,14 +1,23 @@
 package kb
 
 trait Color
-object Empty extends Color {
-	override def toString = "."
+object White extends Color {
+  override def toString = "W"
 }
 object Black extends Color {
 	override def toString = "B"
 }
-object White extends Color {
-	override def toString = "W"
+object Empty extends Color {
+  override def toString = "."
+}
+
+case class Score(white:Int, black:Int, empty:Int) {
+  def apply(color:Color) = color match {
+    case White => white
+    case Black => black
+    case Empty => empty
+  }
+  override def toString = "W:%d B:%d E:%d".format(white, black, empty)
 }
 
 object Board {
@@ -40,7 +49,7 @@ class MutableBoardState(seq:collection.mutable.Seq[Color])
 	def immutable = new BoardState(seq.toSeq) // toSeq to make immutable
 }
 
-class Board(state:BoardState) {
+class Board(state:BoardState) extends Iterable[(Int, Int, Color)] {
 
 	def play(color:Color, col:Int, row:Int):Board = {
 
@@ -99,13 +108,33 @@ class Board(state:BoardState) {
 
 		valid
 	}
+
+  def iterator = (
+    for {
+      x <- 0 until 8
+      y <- 0 until 8
+    } yield (x, y, state.get(x, y))
+  ).iterator
+
+  def score = {
+    var w = 0
+    var b = 0
+    for ((_, _, c) <- this) {
+      c match {
+        case White => w = w + 1
+        case Black => b = b + 1
+        case _ =>
+      }
+    }
+    Score(w, b, 64 - w -b)
+  }
 	
 	override def toString =
 		(for (y <- 0 until 8 reverse) yield {
 			(for (x <- 0 until 8) yield {
 				state.get(x, y)
 			}).mkString(y + " ", " ", "\n")
-		}).mkString("", "", "  0 1 2 3 4 5 6 7")
+		}).mkString("%17s\n".format(score), "", "  0 1 2 3 4 5 6 7")
 }
 
 object Console {
@@ -123,4 +152,8 @@ object Console {
 			case _ => println("Sorry")
 		}
 	}
+  def w(col:Int, row:Int) = play(W, col, row)
+  def b(col:Int, row:Int) = play(B, col, row)
 }
+
+

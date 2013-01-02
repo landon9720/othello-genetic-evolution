@@ -18,3 +18,11 @@ object Strategy {
 			((col == 0 || col == 7) && row >= 2 && row <= 5)
 	}
 }
+
+class SuperStrategy(
+  strategies:Strategy
+) {
+  def play(color:Color, board:Board):(Int, Int) = {
+    null
+  }
+}
