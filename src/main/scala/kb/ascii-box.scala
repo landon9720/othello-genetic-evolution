@@ -1,11 +1,11 @@
 package kb
 
-import scala.Console._
-
 abstract class Box {
 
   case class Child(dx:Int, dy:Int, box:Box)
   def children:Seq[Child]
+
+  import scala.Console._
 
   lazy val w:Int = {
     val child = (children.maxBy { child =>
@@ -21,35 +21,47 @@ abstract class Box {
     child.dy + child.box.h
   }
 
-  def project(canvas:Array[Array[Char]], dx:Int, dy:Int) {
+  def project(map:Array[Array[(Char, Option[String])]], dx:Int, dy:Int) {
     for (Child(x, y, child) <- children)
-      child.project(canvas, x + dx, y + dy)
+      child.project(map, x + dx, y + dy)
   }
 
   def render = {
-
-    val canvas = Array.fill(w, h)(' ')
-    project(canvas, 0, 0)
-
+    val map = Array.fill[(Char, Option[String])](w, h)((' ', None))
+    project(map, 0, 0)
     var buf = ""
     for (y <- 0 until h) {
-      for (x <- 0 until w) {
-        buf += canvas(x)(y)
+      val boxes = for (x <- 0 until w) yield map(x)(y)
+      var lastCode:Option[String] = None
+      for ((char, code) <- boxes) {
+        if (code != lastCode) {
+          buf += RESET
+          buf += code.getOrElse("")
+          lastCode = code
+        }
+        buf += char
       }
       buf += "\n"
     }
-
     buf
   }
+
+  override def toString = render
 }
 
-class Str(s:String, codes:Option[String] = None) extends Box {
-  override lazy val w = s.length
-  override lazy val h = 1
+class Str(s:String, code:Option[String] = None) extends Box {
+
+  private val lines = s.split("\n")
+
+  override lazy val w = lines.map(_.length).max
+  override lazy val h = lines.length
   val children = Nil
 
-  override def project(canvas: Array[Array[Char]], dx: Int, dy: Int) {
-    for (x <- 0 until w)
-      canvas(x + dx).update(dy, s.charAt(x))
+  override def project(map:Array[Array[(Char, Option[String])]], dx:Int, dy:Int) {
+    for (y <- 0 until h) {
+      val line = lines(y)
+      for (x <- 0 until line.length)
+        map(x + dx).update(y + dy, (line.charAt(x), code))
+    }
   }
 }

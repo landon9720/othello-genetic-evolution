@@ -52,6 +52,14 @@ class SuperStrategy(
 
     println("meta: \n%s".format(meta))
 
+    println(new Box {
+      def children = Seq(
+        Child(0, 0, new Str(board.toString)),
+        Child(20, 0, new Str(meta.toString))
+      )
+    })
+
+
     val (x, y, _) = meta.filter(_._3.legal).maxBy(_._3.votes)
     (x, y)
   }
