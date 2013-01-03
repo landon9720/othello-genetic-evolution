@@ -7,6 +7,7 @@ class Game(
   def play(board:Board, color:Color, passed:Boolean = false) {
 
     println("%s's move".format(color))
+    println(board.score)
     println(board)
 
     val pass = board.score.empty == 0 || ! board.exists {
@@ -28,6 +29,8 @@ class Game(
         case Black => black.play(Black, board)
       }
       play(board.play(color, x, y), color.opponent, false)
+    } else {
+      println("Game Over")
     }
   }
 }
