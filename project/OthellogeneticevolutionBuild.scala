@@ -16,7 +16,7 @@ object OthellogeneticevolutionBuild extends Build {
         "com.typesafe.akka" % "akka-actor" % "2.0.1",
         "org.scalatest" %% "scalatest" % "1.8" % "test"
       ),
-	    initialCommands in console := "import kb._;import Console._;"
+	    initialCommands in console := "import kb._;import Console._;import Othello._;"
     )
   )
 
