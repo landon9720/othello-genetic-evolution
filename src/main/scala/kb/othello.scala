@@ -6,15 +6,7 @@ object Othello {
     game(Board(), White)
   }
 
-  val strategies = Seq(
-    new Strategy.Corner,
-    new Strategy.Edge
-  )
-
-  private def game(board:Board, color:Color, passed:Boolean = false) {
-
-    println("%s's move".format(color))
-    println(board.score)
+  def game(board:Board, color:Color, passed:Boolean = false) {
 
     val pass = board.score.empty == 0 || ! board.exists {
       case (x, y, Empty) => try {
@@ -26,21 +18,29 @@ object Othello {
       case _ => false
     }
 
-    if (pass && ! passed) {
-      println("%s passed".format(color))
-      game(board, color.opponent, true)
+    val (result, next) = if (pass && ! passed) {
+      (new Str("no legal play"), Some((board, color.opponent, true)))
     } else if (! pass) {
-      val (x, y) = color match {
-        case White => play(White, board)
-        case Black => play(Black, board)
-      }
-      game(board.play(color, x, y), color.opponent, false)
-    } else {
-      println("Game Over")
+      val (result, nextBoard) = play(color, board)
+      (result, Some((nextBoard, color.opponent, false)))
     }
+    else {
+      (new Str("game over"), None)
+    }
+
+    println(new Box {
+      def children = Seq(
+        Child(0, 0, new Str(color.toString)),
+        Child(0, 1, new Str(board.score.toString)),
+        Child(0, 2, new Str(board.toString)),
+        Child(19, 2, result)
+      )
+    })
+
+    next.map(next => (game _).tupled(next))
   }
 
-  private def play(color:Color, board:Board):(Int, Int) = {
+  def play(color:Color, board:Board) = {
 
     case class Meta(legal:Boolean, votes:Int = 0) {
       override def toString = {
@@ -58,21 +58,15 @@ object Othello {
         case _ => false
       }
       if (valid) {
-        val votes = strategies.count(_.rate(color, x, y, board))
+        val votes = Seq(new Strategy.Corner, new Strategy.Edge).count(_.rate(color, x, y, board))
         new Meta(true, votes)
       } else {
         new Meta(false)
       }
     }
 
-    println(new Box {
-      def children = Seq(
-        Child(0, 0, new Str(board.toString)),
-        Child(20, 0, new Str(meta.toString))
-      )
-    })
-
     val (x, y, _) = meta.filter(_._3.legal).maxBy(_._3.votes)
-    (x, y)
+
+    (new Str(meta.toString), board.play(color, x, y))
   }
 }
