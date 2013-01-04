@@ -1,5 +1,7 @@
 package kb
 
+import util.Random
+
 object Othello {
 
   def test {
@@ -9,13 +11,7 @@ object Othello {
   def game(board:Board, color:Color, passed:Boolean = false) {
 
     val pass = board.score.empty == 0 || ! board.exists {
-      case (x, y, Empty) => try {
-        board.play(color, x, y)
-        true
-      } catch {
-        case _ => false
-      }
-      case _ => false
+      case (x, y, _) => board.test(color, x, y)
     }
 
     val (result, next) = if (pass && ! passed) {
@@ -25,7 +21,7 @@ object Othello {
       (result, Some((nextBoard, color.opponent, false)))
     }
     else {
-      (new Str("game over"), None)
+      (new Str("%s wins".format(board.score.winner.getOrElse("(tie)"))), None)
     }
 
     println(new Box {
@@ -51,22 +47,22 @@ object Othello {
     }
 
     val meta = BoardState { (x:Int, y:Int) =>
-      val valid = try {
-        board.play(color, x, y)
-        true
-      } catch {
-        case _ => false
-      }
-      if (valid) {
-        val votes = Seq(new Strategy.Corner, new Strategy.Edge).count(_.rate(color, x, y, board))
+        if (board.test(color, x, y)) {
+        val strategies = color match {
+        case White => Seq(new Strategy.Corner, new Strategy.Edge)
+          case Black => Seq()
+        }
+        val votes = strategies.count(_.rate(color, x, y, board))
         new Meta(true, votes)
       } else {
         new Meta(false)
       }
     }
 
-    val (x, y, _) = meta.filter(_._3.legal).maxBy(_._3.votes)
-
+    val legal = meta.filter(_._3.legal)
+    val (x, y, _) = rnd.shuffle(legal.filter(_._3.votes == legal.maxBy(_._3.votes)._3.votes)).head
     (new Str(meta.toString), board.play(color, x, y))
   }
+
+  val rnd = new Random
 }

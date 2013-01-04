@@ -13,6 +13,13 @@ object Board {
 
 class Board(val state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
 
+  def test(color:Color, col:Int, row:Int):Boolean = try {
+    play(color, col, row)
+    true
+  } catch {
+    case _=> false
+  }
+
 	def play(color:Color, col:Int, row:Int):Board = {
 
 		assert(state.get(col, row) == Empty, "not empty")
@@ -60,6 +67,7 @@ class Board(val state:BoardState[Color]) extends Iterable[(Int, Int, Color)] {
       case Empty => empty
     }
     override def toString = "W:%d B:%d E:%d".format(white, black, empty)
+    val winner = if (white > black) Some(White) else if (black > white) Some(Black) else None
   }
 
   def score = {
